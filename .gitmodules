@@ -1,0 +1,12 @@
+[submodule "external"]
+	path = external
+	url = https://github.com/ClipCaslCollab/ArabicPreprocessingScripts.git
+[submodule "external/ArabicPreprocessingScripts"]
+	path = external/ArabicPreprocessingScripts
+	url = https://github.com/ClipCaslCollab/ArabicPreprocessingScripts.git
+[submodule "external/termite-data-server"]
+	path = external/termite-data-server
+	url = https://github.com/uwdata/termite-data-server.git
+[submodule "external/termite-ui"]
+	path = external/termite-ui
+	url = https://github.com/alisonmsmith/termite-ui.git
