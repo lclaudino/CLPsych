@@ -23,5 +23,8 @@ Thumbs.db
 *.o
 *.so
 
-# Python pyc files
+# Python, eclipse and pydev files
 *.pyc
+.cache
+.project
+.pydevproject
