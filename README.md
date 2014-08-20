@@ -23,11 +23,11 @@ http://innovation.columbia.edu/technologies/cu14012_arabic-language-disambiguati
 
 6. (*Arabic-only*) Still in external/ run setup_madamira.sh
 
-7. Execute run_pipeline.sh. The results will be shown on the screen and also saved in $OUTPUTFOLDER/results/log.txt
+7. Go back to the base folder and execute run_pipeline.sh. The results will be shown on the screen and also saved in $OUTPUTFOLDER/results/log.txt
 
 #### To export the best performing LDA model so it can be used with the Tomcat version of ITM:
 
-1. Go back to the base folder, go in src/treeTM/ and run build.sh (ignore warning messages)
+1. In the base folder, go in src/treeTM/ and run build.sh to compile the treeTM classes (ignore warning messages)
 
 
 
