@@ -13,7 +13,7 @@ Pipeline to process text with the enhancement of psychology-driven features.
 2. Open run_pipeline.sh and set the $PYTHON and $PYTHONPATH variables such that the modules above are visible. Also, copy the pre-processed "file.tsv" file to folder input/ and set DATAFILE=$INPUTDIR/"file.tsv"
 and setup the output folder $OUTPUTFOLDER to where all the final results will be stored. Alternatively, you can set other parameters within the file, if you are familiar with the used software.
 
-#### If processing Arabic do steps 3--6 otherwise go to step 7
+*If processing Arabic do steps 3--6 below  otherwise go to step 7*
 
 3. Make sure all ArabicPreprocessingScripts, termite-data-server and termite-ui came along with the bundle. 
 They should be in the external/ folder. If not use git to pull the remote versions.
