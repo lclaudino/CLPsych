@@ -1,6 +1,6 @@
 CLPsych
 =======
-Pipeline to process text with the enhancement of psychology-driven features.
+#### Pipeline to process text with the enhancement of psychology-driven features.
 
 To run the LDA + LIWC + cultural features pipeline
 
