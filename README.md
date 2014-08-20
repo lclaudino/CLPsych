@@ -1,8 +1,8 @@
 CLPsych
 =======
-#### Pipeline to process text with the enhancement of psychology-driven features.
+Pipeline to process text with the enhancement of psychology-driven features.
 
-To run the LDA + LIWC + cultural features pipeline
+#### To run the LDA + LIWC + cultural features pipeline
 
 1. Install the following software/dependencies:
 > - Python 2.7.x: https://www.python.org/download/releases/2.7/
