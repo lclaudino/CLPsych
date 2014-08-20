@@ -4,18 +4,22 @@
 #########################
 # General settings
 
-PYTHON=/Library/Frameworks/Python.framework/Versions/2.7/bin/python
-BASEDIR=/tmp/code/
+PYTHON=/Library/Frameworks/Python.framework/Versions/2.7/bin/python # <----- change here
+BASEDIR=$(pwd)
 INPUTDIR=$BASEDIR/input/
-OUTPUTDIR=$BASEDIR/output/
+OUTPUTDIR=/tmp/clpsych/output/ # <----- change here
 EXTERNAL=$BASEDIR/external/
-DATAFILE=$INPUTDIR/wmdtweets_2014-06-09.tsv.madamira.filt
+DATAFILE=$INPUTDIR/wmdtweets_2014-06-09.tsv.madamira.filt # <----- change here
 LIWC_PICKLE=$INPUTDIR/licw_arabic_dict.pkl
+
+mkdir -p $OUTPUTDIR/feat-files
+mkdir -p $OUTPUTDIR/topic_features
+mkdir -p $OUTPUTDIR/results
 
 chmod -R 775 $OUTPUTDIR 
 
 export PYTHONPATH=/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/site-packages:\
-/opt/local/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/site-packages/
+/opt/local/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/site-packages/ # <----- change here
 
 #########################
 # Create features
