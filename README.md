@@ -23,7 +23,7 @@ http://innovation.columbia.edu/technologies/cu14012_arabic-language-disambiguati
 
 6. (*Arabic-only*) Still in external/ run setup_madamira.sh
 
-7. Execute run_pipeline.sh
+7. Execute run_pipeline.sh. The results will be shown on the screen and also saved in $OUTPUTFOLDER/results/log.txt
 
 #### To export the best performing LDA model so it can be used with the Tomcat version of ITM:
 
