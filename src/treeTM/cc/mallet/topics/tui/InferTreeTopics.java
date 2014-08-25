@@ -71,6 +71,13 @@ public class InferTreeTopics {
 			TreeTopicInferencer inferencer = TreeTopicInferencer.read(new File(inferencerFilename.value));
 			System.out.println("Inferencer loaded.");
 			
+			// Leo: trying to deal with recurring encoding issues --> have to test this to whether it is
+			// necessary. Sometimes it messes up.
+
+			for (int i = 0; i < inferencer.vocab.size(); i++)
+                        	inferencer.vocab.set(i, new String( inferencer.vocab.get(i).getBytes("utf-8")) );
+
+
 			inferencer.setRandomSeed(randomSeed.value);
 			
 			inferencer.writeInferredDistributions(testlist, new File(docTopicsFile.value), 

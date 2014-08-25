@@ -1,4 +1,5 @@
 import csv, re, numpy as np, csv, codecs, cStringIO, cPickle as pickle, os, os.path, cfg
+import argparse
 from tok import tokenize_ar
 
 def tokenize(ar_text):
@@ -81,71 +82,86 @@ class UnicodeWriter:
             self.writerow(row)
 
 
+if __name__ == '__main__':
 
-csvobj = UnicodeReader(open('/fs/clip-casl-sentiment/corpora/tweets/wmdtweets_2014-06-09.tsv', 'r'),delimiter='\t')
-#pickle.dump(list(csvobj),open('tweets.pkl','w'))
-#exit()
-header=csvobj.next()
+    parser = argparse.ArgumentParser( description = 'Apply Madamira to the documents' )
+    parser.add_argument( '--combine_annotations', type = str, dest = 'combine_annotations', help = 'Either \"mean\" or \"median\"')
+    parser.add_argument( '--filename', type = str, dest = 'filename', help = 'File with documents')
+    parser.add_argument( '--out_folder', type = str, dest = 'out_folder', default='./', help = 'Folder where outputs will be dumped')
 
-ind_sent=header.index('sentiment')
-ind_relev=header.index('relevance')
-ind_tweet=header.index('tweet')
-ind_tweetid=header.index('tweetid')
-ind_file=header.index('tsv_file')
-ind_religious=header.index('religious_boolean')
-ind_abusive=header.index('abusive_boolean')
-ind_profanity=header.index('profanity_boolean')
-ind_national=header.index('national_role_boolean')
-
-dict_tweets={}
-for ii in csvobj:
-
-    #ii[ind_relev]=re.sub('\s+\t\s+','\t',ii[ind_relev])   
-    ii[ind_tweet]=re.sub('\*[^\*]+\*','',ii[ind_tweet])
-    ii[ind_tweet]=re.sub('\n','',ii[ind_tweet])
-    #ii[ind_tweet]=re.sub('#.+\s','',ii[ind_tweet])
-
-    if not ii[ind_relev] == 'R':
-    	continue
-
-    if not len(ii) == len(header):
-	continue
+    args = parser.parse_args()
     
-    try:
-        np.float(ii[ind_sent])
-    except:
-        continue
+    csvobj = UnicodeReader(open(args.filename, 'r'),delimiter='\t')
+    #pickle.dump(list(csvobj),open('tweets.pkl','w'))
+    #exit()
+    header=csvobj.next()
     
-    if not dict_tweets.has_key(ii[ind_tweetid]):
-        dict_tweets[ii[ind_tweetid]]=([],[],[],[],[],'')
+    ind_sent=header.index('sentiment')
+    ind_relev=header.index('relevance')
+    ind_tweet=header.index('tweet')
+    ind_tweetid=header.index('tweetid')
+    ind_file=header.index('tsv_file')
+    ind_religious=header.index('religious_boolean')
+    ind_abusive=header.index('abusive_boolean')
+    ind_profanity=header.index('profanity_boolean')
+    ind_national=header.index('national_role_boolean')
+    
+    dict_tweets={}
+    ind=0;
+    for ii in csvobj:
+    
+        print 'Doc %d'%ind
+        ind += 1
 
-    l=list(dict_tweets[ii[ind_tweetid]])
-    l[0].append(np.float(ii[ind_sent]))
-    l[1].append(np.float(ii[ind_religious]))
-    l[2].append(np.float(ii[ind_abusive])) 
-    l[3].append(np.float(ii[ind_profanity]))
-    l[4].append(np.float(ii[ind_national]))
-    #l[5]=ii[ind_tweet]
-    l[5] = tokenize(ii[ind_tweet])
-    dict_tweets[ii[ind_tweetid]]=l
-
-csvobj=UnicodeWriter(open('wmdtweets_2014-06-09.median.tsv.filt', 'w'),delimiter=',')
-csvobj.writerow(['id', 'sent', 'religious','abusive','profanity','national','text'])
-for ind,ii in enumerate(dict_tweets.iterkeys()):
-    csvobj.writerow([ ii, str(round(np.median(dict_tweets[ii][0]))), \
-			  str(round(np.median(dict_tweets[ii][1]))), \
-			  str(round(np.median(dict_tweets[ii][2]))), \
-			  str(round(np.median(dict_tweets[ii][3]))), \
-			  str(round(np.median(dict_tweets[ii][4]))), \
-			  dict_tweets[ii][5] ])
-
-'''
-for ind,ii in enumerate(dict_tweets.iterkeys()):
-    csvobj.writerow([ ii, str(np.mean(dict_tweets[ii][0])), \
-			  str(np.mean(dict_tweets[ii][1])), \
-			  str(np.mean(dict_tweets[ii][2])), \
-			  str(np.mean(dict_tweets[ii][3])), \
-			  str(np.mean(dict_tweets[ii][4])), \
-			  dict_tweets[ii][5] ])
-'''
+        #ii[ind_relev]=re.sub('\s+\t\s+','\t',ii[ind_relev])   
+        ii[ind_tweet]=re.sub('\*[^\*]+\*','',ii[ind_tweet])
+        ii[ind_tweet]=re.sub('\n','',ii[ind_tweet])
+        #ii[ind_tweet]=re.sub('#.+\s','',ii[ind_tweet])
+    
+        if not ii[ind_relev] == 'R':
+        	continue
+    
+        if not len(ii) == len(header):
+            continue
+        
+        try:
+            np.float(ii[ind_sent])
+        except:
+            continue
+        
+        if not dict_tweets.has_key(ii[ind_tweetid]):
+            dict_tweets[ii[ind_tweetid]]=([],[],[],[],[],'')
+    
+        l=list(dict_tweets[ii[ind_tweetid]])
+        l[0].append(np.float(ii[ind_sent]))
+        l[1].append(np.float(ii[ind_religious]))
+        l[2].append(np.float(ii[ind_abusive])) 
+        l[3].append(np.float(ii[ind_profanity]))
+        l[4].append(np.float(ii[ind_national]))
+        #l[5]=ii[ind_tweet]
+        l[5] = tokenize(ii[ind_tweet])
+        dict_tweets[ii[ind_tweetid]]=l
+        
+    csvobj=UnicodeWriter(open('%s/%s.%s'%(args.out_folder, args.filename, args.combine_annotations),'w'),delimiter=',')
+    csvobj.writerow(['id', 'sent', 'religious','abusive','profanity','national','text'])
+    
+    combine_method = getattr(np, args.combine_annotations)
+    
+    for ind,ii in enumerate(dict_tweets.iterkeys()):
+        csvobj.writerow([ ii, str(round(np.median(dict_tweets[ii][0]))), \
+    			  str(round(combine_annotation(dict_tweets[ii][1]))), \
+    			  str(round(combine_annotation(dict_tweets[ii][2]))), \
+    			  str(round(combine_annotation(dict_tweets[ii][3]))), \
+    			  str(round(combine_annotation(dict_tweets[ii][4]))), \
+    			  dict_tweets[ii][5] ])
+    
+    '''
+    for ind,ii in enumerate(dict_tweets.iterkeys()):
+        csvobj.writerow([ ii, str(np.mean(dict_tweets[ii][0])), \
+    			  str(np.mean(dict_tweets[ii][1])), \
+    			  str(np.mean(dict_tweets[ii][2])), \
+    			  str(np.mean(dict_tweets[ii][3])), \
+    			  str(np.mean(dict_tweets[ii][4])), \
+    			  dict_tweets[ii][5] ])
+    '''
 

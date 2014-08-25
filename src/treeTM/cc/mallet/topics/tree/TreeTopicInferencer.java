@@ -37,7 +37,7 @@ public class TreeTopicInferencer implements Serializable {
 	
 	int numTopics;
 	double[] alpha;
-	ArrayList<String> vocab;
+	public ArrayList<String> vocab;
 	HashSet<String> removed;
 	TreeTopicModel topics;
 	String modelType;
@@ -86,25 +86,27 @@ public class TreeTopicInferencer implements Serializable {
 	 */
 	public double[] getSampledDistribution(Instance instance, int numIterations, int interval) throws UnsupportedEncodingException{
 
+
+
 		FeatureSequence alltokens = (FeatureSequence) instance.getData();
 		ArrayList<Integer> tokens = new ArrayList<Integer> ();
 		for (int position = 0; position < alltokens.size(); position++) {
 			//String word = (String) alltokens.getObjectAtPosition(position);
 			// Leo: changed here to handle utf-8
-			//try{
-				String word = new String ( ((String)
-                        	alltokens.getObjectAtPosition(position)).getBytes("utf-8") );
-			//catch (UnsupportedEncodingException e) {
-			//	e.printStackTrace();
-			//}
+			String word = new String ( ((String)
+                        alltokens.getObjectAtPosition(position)).getBytes("utf-8") );
 
 			if(this.vocab.indexOf(word) >= 0 && !this.removed.contains(word)) {
 				int type = this.vocab.indexOf(word);
 				tokens.add(type);
 			}
+			
 		}
 		
 		int docLength = tokens.size();
+		//System.out.println(docLength);
+
+
 		int[] localtopics = new int[docLength];
 		int[] localpaths = new int[docLength];
 		TIntIntHashMap localTopicCounts = new TIntIntHashMap();
@@ -323,7 +325,6 @@ public class TreeTopicInferencer implements Serializable {
 		int doc = 0;
 
 		for (Instance instance: instances) {
-			System.out.println(doc);
 			double[] topicDistribution =
 				getSampledDistribution(instance, numIterations, interval);
 			out.print (doc); out.print (' ');
@@ -379,6 +380,7 @@ public class TreeTopicInferencer implements Serializable {
         this.vocab = (ArrayList<String>) in.readObject();
         this.removed = (HashSet<String>) in.readObject();
         this.topics = (TreeTopicModel) in.readObject();
+
 	}
 
 	public static TreeTopicInferencer read (File f) throws Exception {
