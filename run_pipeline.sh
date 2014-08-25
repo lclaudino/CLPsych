@@ -55,19 +55,18 @@ $PYTHON $BASEDIR/src/experiments/train_topics.py \
 INFER_NUM_ITE=1000
 BURNIN=100
 TARGET_VAR=sent
+EXP_TYPE=regression
 
 $PYTHON $BASEDIR/src/experiments/evaluate.py \
 --out_folder=$OUTPUTDIR/results/ \
 --feature_pkl_file_regexp=$OUTPUTDIR/feat-files/$( basename $DATAFILE ).sent.pkl \
 --target=$TARGET_VAR \
---experiment_type=regression \
+--experiment_type=$EXP_TYPE \
 --topic_model_pkl=$OUTPUTDIR/topic-feats/$MODEL/$( basename $DATAFILE ).sent.pkl-to-$( basename $DATAFILE ).sent.pkl_"$NUM_TOPICS"_kf_"$K".pkl \
 --topic_model_args=num_ite=$NUM_ITE,burnin=$BURNIN,seed=$SEED
 
 ##########################
 # Display results
-
-EXP_TYPE=regression
 
 $PYTHON $BASEDIR/src/experiments/results.py \
 --pkl_file=$OUTPUTDIR/results/$MODEL/sent.regression.topics_"$NUM_TOPICS"_k_"$K".pkl --exp_type=$EXP_TYPE

@@ -2,7 +2,7 @@
 
 CFG_PATH=$(pwd)/ArabicPreprocessingScripts/cfg.py
 MADA_PATH=$(pwd)/$(ls | grep MADAMIRA)
-MADA_JAR=$(pwd)$(ls $MADA_PATH/*.jar) 
+MADA_JAR=$(ls $MADA_PATH/*.jar) 
 MADA_CFG=$MADA_PATH/config/madamira.xml
 SCRATCH_PATH=/tmp/scratch
 

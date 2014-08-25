@@ -1,4 +1,5 @@
 import argparse, os, sys, cPickle as pickle, numpy as np, codecs, re
+from topic_model import MalletLDA
 from sklearn.svm import SVR, SVC
 from glob import iglob
 from sklearn import preprocessing as pp
@@ -60,6 +61,17 @@ if __name__ == '__main__':
                          help = 'Pickle with object that has the topic models')
     parser.add_argument( '--topic_model_args', type = str, dest = 'topic_model_args', 
                          help = 'Arguments to topic model: arg1,val1,arg2,val2 ...')
+    parser.add_argument( '--fold', type = int, dest = 'fold', 
+                         help = 'Will only compute results for that train/test split')
+    parser.add_argument( '--fold_path', type = str, dest = 'fold_path', 
+                         help = 'Folder where the results corresponding to the given fold lives')
+    parser.add_argument( '--topic_model_name', type = str, dest = 'topic_model_name', 
+                         help = 'Name of the topic model to be used. Overrides the one in \"--topic_model_pkl\"')
+    parser.add_argument( '--topic_model_path', type = str, dest = 'topic_model_path', 
+                         help = 'Path to the topic model.')
+    parser.add_argument( '--mallet_bin_path', type = str, dest = 'mallet_bin_path', 
+                         help = 'Path to the Mallet topic model.')
+
 
     args = parser.parse_args()
 
@@ -69,16 +81,28 @@ if __name__ == '__main__':
         stoplist = [word.replace('\'','') for word in codecs.open(args.stoplist_file,'r','utf-8').readlines()]
 
     # Load the pickle that has the trained topic models for k different partitions
-    [dict_kfold, skf, k, num_topics, bin_path, tm_name] = pickle.load(open(args.topic_model_pkl,'rb'))
-    
-    # Instantiate topic model wrapper based on the given name
+    [dict_kfold, skf, k, num_topics, tool_path, tm_name] = pickle.load(open(args.topic_model_pkl,'rb'))
+        
+    # This makes adjustments in case we are testing at a specific fold
+    fold_str = ""
+    if args.fold <> None and args.fold_path <> None and args.topic_model_path <> None \
+    and args.topic_model_name <> None:
+        tm_name=args.topic_model_name
+        tool_path = args.topic_model_path 
+        fold_str += "_fold_%d"%args.fold
+        for ii in dict_kfold.iterkeys():
+            for jj in dict_kfold[ii].iterkeys():
+                dict_kfold[ii][jj]=args.fold_path
+        
     tm_class = getattr(__import__('topic_model'), tm_name)
-    tm = tm_class(bin_path)
-    
+    if tm_name == 'ITMTomcat':
+        tm = tm_class(tool_path, args.mallet_bin_path)
+    else:
+        tm = MalletLDA(args.mallet_bin_path)
+        
     # Extract topic model parameters
     tm_args = re.findall('([^=]+)=([^,]+),*',args.topic_model_args, re.M)
     tm_args = {ii[0]:ii[1] for ii in tm_args}
-
     
     if args.experiment_type == 'regression':
         r={}
@@ -103,7 +127,8 @@ if __name__ == '__main__':
 
         if args.experiment_type == 'regression':
             # Pearson's r score for each feature
-            r_uni, r_uni_X_hum, r_uni_lda, r_uni_X_liwc, r_uni_lda_X_liwc, r_uni_X_liwc_X_hum, r_uni_lda_X_hum, r_uni_lda_X_hum_X_liwc=[],[],[],[],[],[],[],[]
+            r_uni, r_uni_X_hum, r_uni_lda, r_uni_X_liwc, r_uni_lda_X_liwc, \
+            r_uni_X_liwc_X_hum, r_uni_lda_X_hum, r_uni_lda_X_hum_X_liwc=[],[],[],[],[],[],[],[]
             r_lda, r_lda_X_hum, r_lda_X_liwc = [],[],[]
             r_X_liwc, r_X_liwc_X_hum, r_X_hum = [],[],[]
         else:
@@ -118,10 +143,15 @@ if __name__ == '__main__':
             p_uni_X_liwc_X_hum, r_uni_X_liwc_X_hum, f_uni_X_liwc_X_hum, s_uni_X_liwc_X_hum = {},{},{},{}
             p_lda_X_hum, r_lda_X_hum, f_lda_X_hum, s_lda_X_hum = {},{},{},{}
             p_uni_lda_X_hum, r_uni_lda_X_hum, f_uni_lda_X_hum, s_uni_lda_X_hum = {},{},{},{}
-            p_uni_lda_X_hum_X_liwc, r_uni_lda_X_hum_X_liwc, f_uni_lda_X_hum_X_liwc, s_uni_lda_X_hum_X_liwc = {},{},{},{}
+            p_uni_lda_X_hum_X_liwc, r_uni_lda_X_hum_X_liwc, f_uni_lda_X_hum_X_liwc, \
+            s_uni_lda_X_hum_X_liwc = {},{},{},{}
 
         for ind, (train_index, test_index) in enumerate(skf[ii]):
 
+            # Check if a single fold will be considered
+            #if args.fold <> None and args.fold_path <> None and ind <> args.fold:
+            #    continue
+            
             print '[[Running k=%d of %d]]'%(ind+1, k)
             y_train, yt = y[train_index], y[test_index]
             ids_train, ids_test = ids[train_index], ids[test_index]
@@ -164,17 +194,19 @@ if __name__ == '__main__':
             for row, jj in enumerate(test_corpus):
                 X_test_uni[row]=np.array(word_counts(vocab, jj)) + np.ones((1, len(vocab)))  # add-one smoothing
             X_test_uni = scaler.transform(X_test_uni)
-            
+
             # Fit linear models for each case
             print '> Fitting and scoring models'
  
             # unigrams only
+   
             print '>> unigrams'
             svm.fit(X_train_uni,y_train)
             y_uni = svm.predict(X_test_uni)
             
             # LDA only
-            print '>> lda only'
+
+            print '>> TM only'
             svm.fit(X_train_lda,y_train)
             y_lda = svm.predict(X_test_lda)
 
@@ -189,7 +221,7 @@ if __name__ == '__main__':
             y_X_liwc = svm.predict(X_liwc_test)
             
             # unigrams + LDA
-            print '>> unigrams + lda'
+            print '>> unigrams + TM'
             X_train_comb = np.concatenate((X_train_uni, X_train_lda),axis=1)
             scaler = pp.StandardScaler().fit(X_train_comb)
             X_train_comb = scaler.transform(X_train_comb)
@@ -229,7 +261,7 @@ if __name__ == '__main__':
             y_uni_X_liwc = svm.predict(X_test_comb)
             
             # LDA + X_hum
-            print '>> lda + contextual'
+            print '>> TM + contextual'
             X_train_comb=np.concatenate((X_train_lda, X_hum_train),axis=1)
             scaler = pp.StandardScaler().fit(X_train_comb)
             X_train_comb = scaler.transform(X_train_comb)
@@ -239,7 +271,7 @@ if __name__ == '__main__':
             y_lda_X_hum = svm.predict(X_test_comb)
             
             # LDA + X_liwc
-            print '>> lda + contextual'
+            print '>> TM + contextual'
             X_train_comb=np.concatenate((X_train_lda, X_liwc_train),axis=1)
             scaler = pp.StandardScaler().fit(X_train_comb)
             X_train_comb = scaler.transform(X_train_comb)
@@ -259,7 +291,7 @@ if __name__ == '__main__':
             y_uni_X_liwc_X_hum = svm.predict(X_test_comb)
 
             # unigrams + LDA + X_liwc
-            print '>> unigrams + lda + liwc'
+            print '>> unigrams + TM + liwc'
             X_train_comb=np.concatenate((X_train_uni, X_train_lda, X_liwc_train),axis=1)
             scaler = pp.StandardScaler().fit(X_train_comb)
             X_train_comb = scaler.transform(X_train_comb)
@@ -269,7 +301,7 @@ if __name__ == '__main__':
             y_uni_lda_X_liwc = svm.predict(X_test_comb)
 
             # unigrams + LDA + X_hum
-            print '>> unigrams + lda + contextual'
+            print '>> unigrams + TM + contextual'
             X_train_comb=np.concatenate((X_train_uni, X_train_lda, X_hum_train),axis=1)
             scaler = pp.StandardScaler().fit(X_train_comb)
             X_train_comb = scaler.transform(X_train_comb)
@@ -279,7 +311,7 @@ if __name__ == '__main__':
             y_uni_lda_X_hum = svm.predict(X_test_comb)
 
             # unigrams + LDA + X_hum + X_liwc
-            print '>> unigrams + lda + contextual + liwc'
+            print '>> unigrams + TM + contextual + liwc'
             X_train_comb=np.concatenate((X_train_uni, X_train_lda, X_hum_train, X_liwc_train),axis=1)
             scaler = pp.StandardScaler().fit(X_train_comb)
             X_train_comb = scaler.transform(X_train_comb)
@@ -375,6 +407,11 @@ if __name__ == '__main__':
                    r_uni_lda_X_liwc.index(max(r_uni_lda_X_liwc)),
                    r_uni_lda_X_hum.index(max(r_uni_lda_X_hum)), 
                    r_uni_lda_X_hum_X_liwc.index(max(r_uni_lda_X_hum_X_liwc))) #\,
+            
+            # Single fold evaluation case
+#             if args.fold <> None and args.fold_path <> None and args.topic_model_path <> None \
+#             and args.topic_model_name <> None:
+#                 max_fold[ii]=[args.fold for jj in range(14)]    
                
             max_fold_dir[ii]=(dict_kfold[ii][ max_fold[ii][0] ],
                    dict_kfold[ii][ max_fold[ii][1] ],
@@ -390,8 +427,6 @@ if __name__ == '__main__':
                    dict_kfold[ii][ max_fold[ii][11] ],                      
                    dict_kfold[ii][ max_fold[ii][12] ],                      
                    dict_kfold[ii][ max_fold[ii][13] ])
-            
-            
         else:
             for jj in p_uni.iterkeys():
                 
@@ -450,6 +485,11 @@ if __name__ == '__main__':
                        np.mean(np.array(s_uni_lda_X_liwc[jj])),                      
                        np.mean(np.array(s_uni_lda_X_hum[jj])),                      
                        np.mean(np.array(s_uni_lda_X_hum_X_liwc[jj])))
+
+                # Single fold evaluation case
+#                 if args.fold <> None and args.fold_path <> None and args.topic_model_path <> None \
+#                 and args.topic_model_name <> None:
+#                     max_fold[ii][jj]=[args.fold for jj in range(14)]    
                 
                 max_fold[jj][ii]=(f_uni.index(max(f_uni[jj])), 
                        f_uni_X_hum.index(max(f_uni_X_hum[jj])), 
@@ -474,22 +514,17 @@ if __name__ == '__main__':
                        dict_kfold[ii][ max_fold[jj][ii][8] ],                      
                        dict_kfold[ii][ max_fold[jj][ii][9] ],                      
                        dict_kfold[ii][ max_fold[jj][ii][10] ])
- 
     
+    
+    if not os.path.exists(args.out_folder +'/'+ tm_name+'/'):
+        os.makedirs(args.out_folder +'/'+ tm_name+'/')
+        
     if args.experiment_type == 'regression':
-#         pickle.dump(r, open(args.out_folder + '/'+args.target+'.results.topics_' + \
-#                             str(args.num_topics) + '_k_' + str(folds) + '.pkl', 'wb'))
-        if not os.path.exists(args.out_folder +'/'+ tm_name+'/'):
-            os.makedirs(args.out_folder +'/'+ tm_name+'/')
-
         pickle.dump([r, max_fold, max_fold_dir], open(args.out_folder +'/'+ tm_name+'/' +args.target+\
-        '.regression.topics_' + str(num_topics) + '_k_' + str(k) + '.pkl', 'wb'))
-    elif args.experiment_type == 'classification':
-#         pickle.dump([p,r,f,s], open(args.out_folder + '/'+args.target+'.results.topics_' + \
-#                                     str(args.num_topics) +'_k_' + str(args.target) + '_' + \
-#                                     args.experiment_type + '_linear_' + '.pkl', 'wb'))
-        pickle.dump([p, r, f, s, max_fold, max_fold_dir], open(args.out_folder +'/'+ type(tm_name).__name__ +\
-             '/' +args.target+'.prediction.topics_' + str(args.num_topics) + '_k_' + str(k) + '.pkl', 'wb'))
+        '.regression.topics_' + str(num_topics) + '_k_' + str(k) + fold_str + '.pkl', 'wb'))
+    elif args.experiment_type == 'prediction':
+        pickle.dump([p, r, f, s, max_fold, max_fold_dir], open(args.out_folder +'/'+ tm_name+'/' +args.target+\
+        '.prediction.topics_' + str(num_topics) + '_k_' + str(k) + fold_str + '.pkl', 'wb'))
     
      
     print 'Okay, done!'
