@@ -24,6 +24,9 @@ def word_counts (vocab, text_to_count):
 
 def compute_prfs(yt, y_feat, p_feat, r_feat, f_feat, s_feat, labels):
 
+    print np.shape(yt)
+    print np.shape(y_feat)
+    
     for (iind, (pr,rr,ff,ss)) in enumerate(zip(*pr_fs(yt, y_feat))): # each label seen in gt
         if iind >= len(labels): # to cope with bug 
             continue
@@ -147,7 +150,6 @@ if __name__ == '__main__':
             s_uni_lda_X_hum_X_liwc = {},{},{},{}
 
         for ind, (train_index, test_index) in enumerate(skf[ii]):
-
             # Check if a single fold will be considered
             #if args.fold <> None and args.fold_path <> None and ind <> args.fold:
             #    continue
@@ -491,17 +493,17 @@ if __name__ == '__main__':
 #                 and args.topic_model_name <> None:
 #                     max_fold[ii][jj]=[args.fold for jj in range(14)]    
                 
-                max_fold[jj][ii]=(f_uni.index(max(f_uni[jj])), 
-                       f_uni_X_hum.index(max(f_uni_X_hum[jj])), 
-                       f_uni_X_liwc.index(max(f_uni_X_liwc[jj])),
-                       f_uni_X_liwc_X_hum.index(max(f_uni_X_liwc_X_hum[jj])),
-                       f_lda.index(max(f_lda[jj])),                      
-                       f_uni_lda.index(max(f_uni_lda[jj])),                      
-                       f_lda_X_hum.index(max(f_lda_X_hum[jj])),                      
-                       f_lda_X_liwc.index(max(f_lda_X_liwc[jj])),                      
-                       f_uni_lda_X_liwc.index(max(f_uni_lda_X_liwc[jj])),                      
-                       f_uni_lda_X_hum.index(max(f_uni_lda_X_hum[jj])),                      
-                       f_uni_lda_X_hum_X_liwc.index(max(f_uni_lda_X_hum_X_liwc[jj])))
+                max_fold[jj][ii]=(f_uni[jj].index(max(f_uni[jj])), 
+                       f_uni_X_hum[jj].index(max(f_uni_X_hum[jj])), 
+                       f_uni_X_liwc[jj].index(max(f_uni_X_liwc[jj])),
+                       f_uni_X_liwc_X_hum[jj].index(max(f_uni_X_liwc_X_hum[jj])),
+                       f_lda[jj].index(max(f_lda[jj])),                      
+                       f_uni_lda[jj].index(max(f_uni_lda[jj])),                      
+                       f_lda_X_hum[jj].index(max(f_lda_X_hum[jj])),                      
+                       f_lda_X_liwc[jj].index(max(f_lda_X_liwc[jj])),                      
+                       f_uni_lda_X_liwc[jj].index(max(f_uni_lda_X_liwc[jj])),                      
+                       f_uni_lda_X_hum[jj].index(max(f_uni_lda_X_hum[jj])),                      
+                       f_uni_lda_X_hum_X_liwc[jj].index(max(f_uni_lda_X_hum_X_liwc[jj])))
 
                 max_fold_dir[jj][ii]=(dict_kfold[ii][ max_fold[jj][ii][0] ],
                        dict_kfold[ii][ max_fold[jj][ii][1] ],

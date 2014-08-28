@@ -35,17 +35,17 @@ class MalletLDA (TopicModel):
             data_str += ii + ' ' + ' '.join(jj) + '\n'
         codecs.open('%s/corpus.txt.train'%out_folder,'w','utf-8').write(data_str)
 
-        cmd =" ".join(["%(binpath)s/mallet import-file", 
+        cmd =" ".join(["%(bin_path)s/mallet import-file", 
         "--input %(outfolder)s/corpus.txt.train",
         "--output %(outfolder)s/corpus.mallet",
         "--keep-sequence",
         "--token-regex '\S+'",
         "--remove-stopwords"])\
-        %{'binpath':self.tool_path, 'outfolder':out_folder}
+        %{'bin_path':self.tool_path, 'outfolder':out_folder}
         Popen(cmd,shell=True).communicate()
         
         # Setup and run training here
-        cmd=" ".join(["%(tool_path)s/mallet train-topics",
+        cmd=" ".join(["%(bin_path)s/mallet train-topics",
         "--input %(out_folder)s/corpus.mallet",
         "--random-seed %(seed)d",
         "--num-topics %(num_topics)d",
@@ -58,7 +58,7 @@ class MalletLDA (TopicModel):
         "--topic-word-weights-file %(out_folder)s/wordweights.txt",
         "--word-topic-counts-file %(out_folder)s/wordcounts.txt",
         "--inferencer-filename %(out_folder)s/inferencer.mallet"])\
-        %{'tool_path':self.tool_path, 'out_folder':out_folder, 'seed':seed,
+        %{'bin_path':self.tool_path, 'out_folder':out_folder, 'seed':seed,
           'num_topics':num_topics, 'alpha':alpha, 'num_ite': num_ite}
         Popen(cmd,shell=True).communicate()
         
@@ -92,24 +92,24 @@ class MalletLDA (TopicModel):
             data_str += ii + ' ' + ' '.join(jj) + '\n'
         codecs.open('%s/corpus.txt.infer'%out_folder,'w','utf-8').write(data_str)
 
-        cmd =" ".join(["%(tool_path)s/mallet import-file", 
+        cmd =" ".join(["%(bin_path)s/mallet import-file", 
         "--input %(out_folder)s/corpus.txt.infer",
         "--output %(out_folder)s/corpus.mallet.infer",
         "--keep-sequence",
         "--token-regex '\S+'",
         "--remove-stopwords",
         "--use-pipe-from %(out_folder)s/corpus.mallet"])\
-        %{'tool_path':self.tool_path, 'out_folder':out_folder}
+        %{'bin_path':self.tool_path, 'out_folder':out_folder}
         Popen(cmd,shell=True).communicate()
 
-        cmd = " ".join(["%(tool_path)s/mallet infer-topics",
+        cmd = " ".join(["%(bin_path)s/mallet infer-topics",
         "--burn-in %(burnin)d",
         "--random-seed %(seed)d",
         "--inferencer %(out_folder)s/inferencer.mallet",
         "--input %(out_folder)s/corpus.mallet.infer",
         "--num-iterations %(num_ite)d",
         "--output-doc-topics %(out_folder)s/doctopics.txt.infer"])\
-        %{'tool_path':self.tool_path, 'out_folder':out_folder, 'seed':seed,
+        %{'bin_path':self.tool_path, 'out_folder':out_folder, 'seed':seed,
           'burnin':burnin, 'num_ite': num_ite}
         Popen(cmd,shell=True).communicate()
 

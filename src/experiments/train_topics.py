@@ -49,7 +49,7 @@ def kfold_train(k, filenames, stoplist, topic_model, tm_args, out_folder):
             dict_kfold[ii][ind] = curr_dir
             
     # Save pickle with kfold and topic info
-    pickle.dump([dict_kfold, skf, k, tm_args['num_topics'], tm.bin_path, type(topic_model).__name__], 
+    pickle.dump([dict_kfold, skf, k, tm_args['num_topics'], tm.tool_path, type(topic_model).__name__], 
                 open(out_folder +'/'+ type(topic_model).__name__ +\
              '/' + os.path.basename(filenames[0]) +\
              '-to-' + os.path.basename(filenames[-1]) +\
