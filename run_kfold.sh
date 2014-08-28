@@ -9,7 +9,8 @@ BASEDIR=$(pwd)
 INPUTDIR=$BASEDIR/input/
 OUTPUTDIR=/tmp/clpsych/output/ # <----- change here
 EXTERNAL=$BASEDIR/external/
-DATAFILE=$INPUTDIR/wmdtweets_2014-06-09.tsv.madamira.filt # <----- change here
+#DATAFILE=$INPUTDIR/wmdtweets_2014-06-09.median.tsv.madamira.filt
+DATAFILE=$INPUTDIR/wmdtweets_2014.tsv.median # <----- change here
 
 export PYTHONPATH=/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/site-packages:\
 /opt/local/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/site-packages/ # <----- change here
@@ -19,14 +20,14 @@ export PYTHONPATH=/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.
 # regression experiment
 
 K=10
-NUM_TOPICS=140
+NUM_TOPICS=5
 NUM_ITE=1000
 ALPHA=100
 SEED=11901
 MODEL=MalletLDA
 PATH_TO_MODEL_BIN=$EXTERNAL/mallet-2.0.7/bin/
 TARGET_VAR=sent
-EXP_TYPE=regression
+EXP_TYPE=prediction
 BURNIN=100
 
 $PYTHON $BASEDIR/src/experiments/evaluate.py \
