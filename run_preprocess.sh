@@ -4,17 +4,18 @@
 #########################
 # General settings
 
-PYTHON=/Library/Frameworks/Python.framework/Versions/2.7/bin/python # <----- change here
+
+PYTHON=/opt/local/stow/python-2.7.2/bin/python # <----- change here
 BASEDIR=$(pwd)
 INPUTDIR=$BASEDIR/input/
-OUTPUTDIR=/tmp/clpsych/output/ # <----- change here
+OUTPUTDIR=$BASEDIR/output/ # <----- change here
 EXTERNAL=$BASEDIR/external/
 DATAFILE=$INPUTDIR/wmdtweets_2014.tsv # <----- change here
+LIWC_PICKLE=$INPUTDIR/licw_arabic_dict.pkl
+COMBINE_ANNOTATIONS=median
 
-echo $DATAFILE
+mkdir -p $OUTPUTDIR
+export PYTHONPATH=$PYTHONPATH:$EXTERNAL/ArabicPreprocessingScripts/ # <----- change here
 
-export PYTHONPATH=/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/site-packages:\
-/opt/local/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/site-packages/:\
-$EXTERNAL/ArabicPreprocessingScripts/ # <----- change here
-
-python src/pre-process/filter_and_clean.py --filename=$DATAFILE --combine_annotations=mean --out_folder=$OUTPUT_DIR
+$PYTHON src/pre-process/filter_and_clean.py --filename=$DATAFILE \
+--combine_annotations=$COMBINE_ANNOTATIONS --out_folder=$OUTPUTDIR
