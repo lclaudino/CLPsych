@@ -62,7 +62,8 @@ Next, look for:
 </div>
 ```
 and add one or more entries to the select node with numbers of topics the ITM used would want to interact with. For example, to enable 5 topics add: 
-```<option>5</option>
-```
+
+```<option> 5 </option>```
+
 8) Start the Tomcat server and go to the ITM application URL.
 
