@@ -47,3 +47,5 @@ $PYTHON $BASEDIR/src/experiments/evaluate.py \
 --topic_model_name=ITMTomcat \
 --topic_model_path=src/treeTM/
 
+$PYTHON $BASEDIR/src/experiments/results.py \
+--pkl_file=$OUTPUTDIR/results/$( basename $ITM_MODEL_FOLDER )/$TARGET_VAR.$EXP_TYPE.topics_"$NUM_TOPICS"_k_"$K".pkl --exp_type=$EXP_TYPE
