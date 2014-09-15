@@ -69,6 +69,6 @@ $PYTHON $BASEDIR/src/experiments/evaluate.py \
 # Display results
 
 $PYTHON $BASEDIR/src/experiments/results.py \
---pkl_file=$OUTPUTDIR/results/$MODEL/sent.regression.topics_"$NUM_TOPICS"_k_"$K".pkl --exp_type=$EXP_TYPE
+--pkl_file=$OUTPUTDIR/results/$MODEL/sent.$EXP_TYPE.topics_"$NUM_TOPICS"_k_"$K".pkl --exp_type=$EXP_TYPE
 
 
