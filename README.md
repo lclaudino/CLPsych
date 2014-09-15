@@ -78,6 +78,6 @@ and add one or more entries to the select node with numbers of topics the ITM us
 
 1) Open file run_kfold_after_itm.sh and set variable ITM_MODEL_FOLDER to the path of the final model folder saved after using the Tomcat ITM application. Make sure that DATAFILE is set to the preprocessed data file (should end with .mean or .median, depending on the selection of COMBINE_ANNOTATIONS in run_preprocess.sh). Also, make sure that EXP_TYPE is consistent with that choice: e. g. if the experiment originally run was prediction, set it to prediction, otherwise set it to regression.
 
-2) Run run_kfold_after_itm.sh
+2) Run run_kfold_after_itm.sh.
 
 
