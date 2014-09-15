@@ -17,7 +17,7 @@ def kfold_train(k, filenames, stoplist, topic_model, tm_args, out_folder):
     dict_kfold = {}
     skf={}
     for ii in filenames:
-
+        ii = os.path.normpath(ii)
         # Load texts
         dict_data = pickle.load(open(ii))
         texts=dict_data[4] # --> WILL HAVE TO GENERALIZE THIS BACK IN THE FEATURE GENERATION
@@ -46,7 +46,7 @@ def kfold_train(k, filenames, stoplist, topic_model, tm_args, out_folder):
             topic_model.train(curr_dir, ids, train_corpus, tm_args)
 
             # Save path to results
-            dict_kfold[ii][ind] = curr_dir
+            dict_kfold[ii][ind] = os.path.normpath(curr_dir)
             
     # Save pickle with kfold and topic info
     pickle.dump([dict_kfold, skf, k, tm_args['num_topics'], tm.tool_path, type(topic_model).__name__], 

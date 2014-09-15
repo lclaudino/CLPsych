@@ -86,17 +86,7 @@ if __name__ == '__main__':
     # Load the pickle that has the trained topic models for k different partitions
     [dict_kfold, skf, k, num_topics, tool_path, tm_name] = pickle.load(open(args.topic_model_pkl,'rb'))
         
-    # This makes adjustments in case we are testing at a specific fold
-    fold_str = ""
-    if args.fold <> None and args.fold_path <> None and args.topic_model_path <> None \
-    and args.topic_model_name <> None:
-        tm_name=args.topic_model_name
-        tool_path = args.topic_model_path 
-        fold_str += "_fold_%d"%args.fold
-        for ii in dict_kfold.iterkeys():
-            for jj in dict_kfold[ii].iterkeys():
-                dict_kfold[ii][jj]=args.fold_path
-        
+    # CHANGE HERE -- IF NO ARGS.TOPIC_MODEL_NAME AND PARAMS, FAIL    
     tm_class = getattr(__import__('topic_model'), tm_name)
     if tm_name == 'ITMTomcat':
         tm = tm_class(tool_path, args.mallet_bin_path)
@@ -119,7 +109,6 @@ if __name__ == '__main__':
     # The feature pickle has features computed for n input files, so the experiment is run
     # on each one and the average results are reported
     for ii in iglob(args.feature_pkl_file_regexp):
-
         dict_data = pickle.load(open(ii))
         var = dict_data[7][0].index(args.target)
         ids = np.asarray(dict_data[0])
@@ -523,10 +512,10 @@ if __name__ == '__main__':
         
     if args.experiment_type == 'regression':
         pickle.dump([r, max_fold, max_fold_dir], open(args.out_folder +'/'+ tm_name+'/' +args.target+\
-        '.regression.topics_' + str(num_topics) + '_k_' + str(k) + fold_str + '.pkl', 'wb'))
+        '.regression.topics_' + str(num_topics) + '_k_' + str(k) + '.pkl', 'wb'))
     elif args.experiment_type == 'prediction':
         pickle.dump([p, r, f, s, max_fold, max_fold_dir], open(args.out_folder +'/'+ tm_name+'/' +args.target+\
-        '.prediction.topics_' + str(num_topics) + '_k_' + str(k) + fold_str + '.pkl', 'wb'))
+        '.prediction.topics_' + str(num_topics) + '_k_' + str(k) + '.pkl', 'wb'))
     
      
     print 'Okay, done!'
