@@ -31,11 +31,17 @@ and setup the output folder $OUTPUTFOLDER to where all the final results will be
 #### To export the best performing LDA model so it can be used with the Tomcat version of ITM
 
 1) Go in src/treeTM/ and run build.sh to compile the treeTM classes (ignore warning messages).
+
 2) Setup the Tomcat version of ITM by opening, from the base folder, open external/itm-release-install/README.txt and go from there.
+
 3) Look at $OUTPUTFOLDER/results/log.txt that came out of run_pipeline.sh and find out what folder has the best performing results.
+
 4) Copy the path of that folder and edit export_to_itm_tomcat.sh on the base folder.
+
 5) Run export_to_itm_tomcat.sh. This will create a tree structure needed to populate the Tomcat interface of ITM.
+
 6) Copy the contents of the folder data/ and results/ under the folder itm-release/ generated in step 4 to the corresponding folders within the webapps/itm-release/ in the Tomcat home folder.
+
 7) Again, under the Tomcat home folder, open webapps/itm-release/newsession.html and look for:
 ```
 <div class="input">
@@ -66,4 +72,12 @@ and add one or more entries to the select node with numbers of topics the ITM us
 ```<option> 5 </option>```
 
 8) Start the Tomcat server and go to the ITM application URL.
+
+
+#### To run evaluation with updated topics ####
+
+1) Open file run_kfold_after_itm.sh and set variable ITM_MODEL_FOLDER to the path of the final model folder saved after using the Tomcat ITM application. Make sure that DATAFILE is set to the preprocessed data file (should end with .mean or .median, depending on the selection of COMBINE_ANNOTATIONS in run_preprocess.sh). Also, make sure that EXP_TYPE is consistent with that choice: e. g. if the experiment originally run was prediction, set it to prediction, otherwise set it to regression.
+
+2) Run run_kfold_after_itm.sh
+
 
