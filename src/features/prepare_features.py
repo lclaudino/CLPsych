@@ -10,7 +10,6 @@ class FeatureFilesCasl:
         self.dict_feats={}
 
     def create_data_matrices(self, dict_sent):
-    
         dict_data = {}
         for ii in dict_sent.iterkeys():
             list_sent = dict_sent[ii]
@@ -46,9 +45,9 @@ class FeatureFilesCasl:
                 score_str = ' '.join([kk+':'+ str(jj[1][kk]) for kk in jj[1].iterkeys()])
                 lda_str=''
                 lda_str += ' |mallet ' + ' '.join(['topic_' + str(kk[0]) + ':' + str(kk[1]) for kk in sorted(ll, key=itemgetter(0))]) 
-                sent_str  +=  str(jj[0]['uid']) + " 1 " + str(jj[0]['sent']) + ' |lda ' + score_str + lda_str + '\n'
+                sent_str  +=  str(jj[0]['uid']) + " 1 " + str(jj[0][args.pred_column]) + ' |lda ' + score_str + lda_str + '\n'
                 
-            dict_str[ii]['sent'] = sent_str
+            dict_str[ii][args.pred_column] = sent_str
     
         return dict_str   
 
@@ -60,7 +59,7 @@ class FeatureFilesCasl:
     
     def get_feats(self, args):
         
-        liwc = LIWC(args.liwc_dict_filename, 'ar')
+        liwc = LIWC(args.liwc_dict_filename, args.lang)
         d={}
         for ii in glob.iglob(args.input_tsv_regexp):
             print '\n--> Adding casl data from file: %s'%(ii)
@@ -70,14 +69,15 @@ class FeatureFilesCasl:
                 csvobj = csvwe.UnicodeReader(open(ii, 'rb'), delimiter=',')
     
             header=csvobj.next()
-            ind_sent=header.index('sent')
-            ind_text=header.index('text')   
-            ind_uid=header.index('id')
-            ind_religious=header.index('religious')
-            ind_abusive=header.index('abusive')
-            ind_profanity=header.index('profanity')
-            ind_national=header.index('national')
+            ind_sent=header.index(args.pred_column)
+            ind_text=header.index(args.id_col)   
+            ind_uid=header.index(args.text_col)
             
+            if args.feat_list:
+                feat_list = args.feat_list.split(',')
+            else:
+                feat_list = []
+            inds_feats = [header.index(f) for f in feat_list]
             for jj in csvobj:
                 try:
                     # Sentiment score/label
@@ -89,16 +89,19 @@ class FeatureFilesCasl:
                     # Features
                     human_feats={}
                     #human_feats['uid']=jj[ind_uid].strip()
-                    human_feats['relig']=jj[ind_religious].strip()
-                    human_feats['abus']=jj[ind_abusive].strip()
-                    human_feats['prof']=jj[ind_profanity].strip()
-                    human_feats['nat']=jj[ind_national].strip()
+                    index = 0
+                    for feat in feat_list:
+                        human_feats[feat] = jj[inds_feats[index]].strip()
+                        index += 1
+                    #human_feats['relig']=jj[ind_religious].strip()
+                    #human_feats['abus']=jj[ind_abusive].strip()
+                    #human_feats['prof']=jj[ind_profanity].strip()
+                    #human_feats['nat']=jj[ind_national].strip()
                     
                     liwc_feats = liwc.count_liwc_words(text)
-                    
                     if not d.has_key(os.path.basename(ii)):
                         d[os.path.basename(ii)] = []
-                    d[os.path.basename(ii)].append((jj[ind_uid].strip(), human_feats, liwc_feats, {'sent': sent}, text))
+                    d[os.path.basename(ii)].append((jj[ind_uid].strip(), human_feats, liwc_feats, {args.pred_column: sent}, text))
                 except:
                     print 'Whoops'
                     continue
@@ -113,6 +116,16 @@ if __name__ == '__main__':
                          help = 'Folder where features will be dumped')
     parser.add_argument( '--liwc_dict_filename', type = str, dest = 'liwc_dict_filename', 
                           help = 'Pickle with LIWC dictionary')
+    parser.add_argument('--feats', type = str, dest = 'feat_list', help = 'Columns to use as features')
+    parser.add_argument('--prediction', type = str, dest = 'pred_column', 
+                        help = 'Column containing value to predict')
+    parser.add_argument('--lang', type = str, default='en', dest='lang', 
+                        help="Input language ('en' or 'ar'), default 'en'")
+    parser.add_argument('--id', type=str, default='id', dest='id_col', 
+                        help="Label of column with doc ids, default 'id'")
+    parser.add_argument('--text', type=str, default='text', 
+                        dest='text_col', help="Label of column with text, default 'text'")
+                       
 
     
     args = parser.parse_args()

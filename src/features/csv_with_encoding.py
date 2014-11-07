@@ -1,4 +1,4 @@
-import csv, cStringIO, codecs
+import csv, cStringIO, codecs, sys
 
 class UTF8Recoder:
     """
@@ -22,6 +22,7 @@ class UnicodeReader:
         
     def __init__(self, f, dialect=csv.excel, encoding="utf-8", **kwds):
         f = UTF8Recoder(f, encoding)
+        csv.field_size_limit(sys.maxsize)
         self.reader = csv.reader(f, dialect=dialect, **kwds)
 
     def next(self):
