@@ -4,6 +4,7 @@ from sklearn.svm import SVR, SVC
 from glob import iglob
 from sklearn import preprocessing as pp
 from sklearn.metrics import precision_recall_fscore_support as pr_fs
+from scipy import sparse
 
 def to_tokenized(text_list, stoplist):
     #ret = RegexpTokenizer('[\w\d]+') 
@@ -12,15 +13,11 @@ def to_tokenized(text_list, stoplist):
     return [[word for word in document.lower().split(" ")] for document in text_list]   
 
 
-def word_counts (vocab, text_to_count):
-    
-    counts = {ii:0 for ii in vocab.keys()}    
+def word_counts (vocab, text_to_count, row, word_matrix):
     for ii in text_to_count:
         if vocab.has_key(ii):
-            counts[ii]+=1
+            word_matrix[row,vocab[ii]]+=1
         
-    return counts.values()
-
 
 def compute_prfs(yt, y_feat, p_feat, r_feat, f_feat, s_feat, labels):
 
@@ -99,7 +96,7 @@ if __name__ == '__main__':
     
     if args.experiment_type == 'regression':
         r={}
-        svm = SVR(kernel='linear', verbose=True, max_iter=1E6, tol=1E-4)
+        svm = SVR(kernel='linear', verbose=True, max_iter=1E6, tol=1E-4, shrinking=False)
     else:
         p, r, f, s = {},{},{},{}
         svm = SVC(kernel='linear', verbose=True, max_iter=1E6, tol=1E-4, class_weight=None)
@@ -142,7 +139,6 @@ if __name__ == '__main__':
             # Check if a single fold will be considered
             #if args.fold <> None and args.fold_path <> None and ind <> args.fold:
             #    continue
-            
             print '[[Running k=%d of %d]]'%(ind+1, k)
             y_train, yt = y[train_index], y[test_index]
             ids_train, ids_test = ids[train_index], ids[test_index]
@@ -160,51 +156,64 @@ if __name__ == '__main__':
             print '> Running inference'
             train_text = [texts[jj] for jj in train_index]
             train_corpus = to_tokenized(train_text, stoplist)
-            
             X_train_lda = tm.infer(dict_kfold[ii][ind], True, ids_train, train_corpus, tm_args)
             X_train_lda =  [zip(*jj)[1] for jj in X_train_lda]
-
             scaler = pp.StandardScaler().fit(X_train_lda)
             X_train_lda = scaler.transform(X_train_lda)
             test_text =  [texts[jj] for jj in test_index]
             test_corpus = to_tokenized(test_text, stoplist)
-            
+
             X_test_lda = tm.infer(dict_kfold[ii][ind], False, ids_test, test_corpus, tm_args)
             X_test_lda = scaler.transform( [zip(*jj)[1] for jj in X_test_lda] )
 
-            vocab = {jj.strip():jj.strip() for kk in train_corpus for jj in kk}
- 
-            X_train_uni = np.zeros((len(train_corpus),len(vocab)))                
+            index = 0
+            vocab = {}
+            for kk in train_corpus:
+                for jj in kk:
+                    if not jj.strip() in vocab:
+                        vocab[jj.strip()] = index
+                        index += 1
+            print "vocab size: " + str(len(vocab))
+            print "corpus size: " + str(len(train_corpus))
+            #X_train_uni = np.zeros((len(train_corpus),len(vocab)))                
+            X_train_uni = sparse.lil_matrix((len(train_corpus), len(vocab)))
+
             for row, jj in enumerate(train_corpus):
-                X_train_uni[row] = np.array(word_counts(vocab, jj)) + np.ones((1, len(vocab)))  # add-one smoothing
+                #X_train_uni[row] = sparse.csr_matrix(word_counts(vocab, jj))#  + np.ones((1, len(vocab)))  # add-one smoothing
+                word_counts(vocab, jj, row, X_train_uni)
+
+            X_train_uni = X_train_uni.tocsr() #NOTE: when uncommented, take out add one smoothing above
+            scaler = pp.StandardScaler(copy=False, with_mean=False).fit(X_train_uni)
             
-            scaler = pp.StandardScaler().fit(X_train_uni)
             X_train_uni = scaler.transform(X_train_uni)
 
-            X_test_uni = np.zeros((len(test_corpus),len(vocab)))
+            #X_test_uni = np.zeros((len(test_corpus),len(vocab)))
+            X_test_uni = sparse.lil_matrix((len(test_corpus), len(vocab)))
             for row, jj in enumerate(test_corpus):
-                X_test_uni[row]=np.array(word_counts(vocab, jj)) + np.ones((1, len(vocab)))  # add-one smoothing
-            X_test_uni = scaler.transform(X_test_uni)
+                #X_test_uni[row]=np.array(word_counts(vocab, jj)) + np.ones((1, len(vocab)))  # add-one smoothing
+                word_counts(vocab, jj, row, X_test_uni)
+            X_test_uni = scaler.transform(X_test_uni.tocsr())
 
             # Fit linear models for each case
             print '> Fitting and scoring models'
  
             # unigrams only
-   
             print '>> unigrams'
             svm.fit(X_train_uni,y_train)
             y_uni = svm.predict(X_test_uni)
-            
+                        
             # LDA only
-
             print '>> TM only'
             svm.fit(X_train_lda,y_train)
             y_lda = svm.predict(X_test_lda)
 
             # X_hum only
             print '>> contextual features'
-            svm.fit(X_hum_train,y_train)
-            y_X_hum = svm.predict(X_hum_test)
+            if X_hum_train != []:
+                svm.fit(X_hum_train,y_train)
+                y_X_hum = svm.predict(X_hum_test)
+            else:
+                y_X_hum = []
 
             # X_liwc only
             print '>> liwc features'
@@ -213,110 +222,135 @@ if __name__ == '__main__':
             
             # unigrams + LDA
             print '>> unigrams + TM'
-            X_train_comb = np.concatenate((X_train_uni, X_train_lda),axis=1)
-            scaler = pp.StandardScaler().fit(X_train_comb)
+            X_train_comb = sparse.hstack((X_train_uni, X_train_lda))
+            scaler = pp.StandardScaler(copy=False, with_mean=False).fit(X_train_comb)
             X_train_comb = scaler.transform(X_train_comb)
             svm.fit(X_train_comb, y_train)
-            X_test_comb = np.concatenate((X_test_uni, X_test_lda),axis=1)
+            X_test_comb = sparse.hstack((X_test_uni, X_test_lda))
             X_test_comb = scaler.transform(X_test_comb)
             y_uni_lda = svm.predict(X_test_comb)
 
             # X_liwc + X_hum
+            import scipy
             print '>> liwc + humans'
-            X_train_comb=np.concatenate((X_liwc_train, X_hum_train),axis=1)
-            scaler = pp.StandardScaler().fit(X_train_comb)
-            X_train_comb = scaler.transform(X_train_comb)
-            svm.fit(X_train_comb,y_train)
-            X_test_comb=np.concatenate((X_liwc_test, X_hum_test),axis=1)
-            X_test_comb = scaler.transform(X_test_comb)
-            y_X_liwc_X_hum = svm.predict(X_test_comb)
+            if X_hum_train != []:
+                X_train_comb=scipy.hstack((X_liwc_train, X_hum_train))
+                scaler = pp.StandardScaler(copy=False, with_mean=False).fit(X_train_comb)
+                X_train_comb = scaler.transform(X_train_comb)
+                svm.fit(X_train_comb,y_train)
+                X_test_comb=scipy.hstack((X_liwc_test, X_hum_test))
+                X_test_comb = scaler.transform(X_test_comb)
+                y_X_liwc_X_hum = svm.predict(X_test_comb)
+            else:
+                y_X_liwc_X_hum = y_X_liwc
 
             # unigrams + X_hum
             print '>> unigrams + contextual'
-            X_train_comb=np.concatenate((X_train_uni, X_hum_train),axis=1)
-            scaler = pp.StandardScaler().fit(X_train_comb)
-            X_train_comb = scaler.transform(X_train_comb)
-            svm.fit(X_train_comb, y_train)
-            X_test_comb=np.concatenate((X_test_uni, X_hum_test),axis=1)
-            X_test_comb = scaler.transform(X_test_comb)
-            y_uni_X_hum = svm.predict(X_test_comb)
+            if X_hum_train != []:
+                X_train_comb=sparse.hstack((X_train_uni, X_hum_train))
+                scaler = pp.StandardScaler(copy=False, with_mean=False).fit(X_train_comb)
+                X_train_comb = scaler.transform(X_train_comb)
+                svm.fit(X_train_comb, y_train)
+                X_test_comb=sparse.hstack((X_test_uni, X_hum_test))
+                X_test_comb = scaler.transform(X_test_comb)
+                y_uni_X_hum = svm.predict(X_test_comb)
+            else:
+                y_uni_X_hum = y_uni
 
             # unigrams + X_liwc
             print '>> unigrams + liwc'
-            X_train_comb=np.concatenate((X_train_uni, X_liwc_train),axis=1)
-            scaler = pp.StandardScaler().fit(X_train_comb)
+            X_train_comb=sparse.hstack((X_train_uni, X_liwc_train))
+            scaler = pp.StandardScaler(copy=False, with_mean=False).fit(X_train_comb)
             X_train_comb = scaler.transform(X_train_comb)
             svm.fit(X_train_comb, y_train)
-            X_test_comb=np.concatenate((X_test_uni, X_liwc_test),axis=1)
+            X_test_comb=sparse.hstack((X_test_uni, X_liwc_test))
             X_test_comb = scaler.transform(X_test_comb)
             y_uni_X_liwc = svm.predict(X_test_comb)
             
             # LDA + X_hum
             print '>> TM + contextual'
-            X_train_comb=np.concatenate((X_train_lda, X_hum_train),axis=1)
-            scaler = pp.StandardScaler().fit(X_train_comb)
-            X_train_comb = scaler.transform(X_train_comb)
-            svm.fit(X_train_comb,y_train)
-            X_test_comb=np.concatenate((X_test_lda, X_hum_test),axis=1)
-            X_test_comb = scaler.transform(X_test_comb)
-            y_lda_X_hum = svm.predict(X_test_comb)
+            if X_hum_train != []:
+                X_train_comb=scipy.hstack((X_train_lda, X_hum_train))
+                scaler = pp.StandardScaler(copy=False, with_mean=False).fit(X_train_comb)
+                X_train_comb = scaler.transform(X_train_comb)
+                svm.fit(X_train_comb,y_train)
+                X_test_comb=scipy.hstack((X_test_lda, X_hum_test))
+                X_test_comb = scaler.transform(X_test_comb)
+                y_lda_X_hum = svm.predict(X_test_comb)
+            else:
+                y_lda_X_hum = y_lda
             
             # LDA + X_liwc
             print '>> TM + contextual'
-            X_train_comb=np.concatenate((X_train_lda, X_liwc_train),axis=1)
-            scaler = pp.StandardScaler().fit(X_train_comb)
-            X_train_comb = scaler.transform(X_train_comb)
-            svm.fit(X_train_comb,y_train)
-            X_test_comb=np.concatenate((X_test_lda, X_liwc_test),axis=1)
-            X_test_comb = scaler.transform(X_test_comb)
-            y_lda_X_liwc = svm.predict(X_test_comb)
+            if X_hum_train != []:
+                X_train_comb=scipy.hstack((X_train_lda, X_liwc_train))
+                scaler = pp.StandardScaler(copy=False, with_mean=False).fit(X_train_comb)
+                X_train_comb = scaler.transform(X_train_comb)
+                svm.fit(X_train_comb,y_train)
+                X_test_comb=scipy.hstack((X_test_lda, X_liwc_test))
+                X_test_comb = scaler.transform(X_test_comb)
+                y_lda_X_liwc = svm.predict(X_test_comb)
+            else:
+                y_lda_X_liwc = y_lda
 
             # unigrams + X_liwc + X_hum
             print '>> unigrams + liwc + contextual'
-            X_train_comb=np.concatenate((X_train_uni, X_liwc_train, X_hum_train),axis=1)
-            scaler = pp.StandardScaler().fit(X_train_comb)
-            X_train_comb = scaler.transform(X_train_comb)
-            svm.fit(X_train_comb,y_train)
-            X_test_comb=np.concatenate((X_test_uni, X_liwc_test, X_hum_test),axis=1)
-            X_test_comb = scaler.transform(X_test_comb)
-            y_uni_X_liwc_X_hum = svm.predict(X_test_comb)
+            if X_hum_train != []:
+                X_train_comb=sparse.hstack((X_train_uni, X_liwc_train, X_hum_train))
+                scaler = pp.StandardScaler(copy=False, with_mean=False).fit(X_train_comb)
+                X_train_comb = scaler.transform(X_train_comb)
+                svm.fit(X_train_comb,y_train)
+                X_test_comb=sparse.hstack((X_test_uni, X_liwc_test, X_hum_test))
+                X_test_comb = scaler.transform(X_test_comb)
+                y_uni_X_liwc_X_hum = svm.predict(X_test_comb)
+            else:
+                y_uni_X_liwc_X_hum = y_uni_X_liwc
 
             # unigrams + LDA + X_liwc
             print '>> unigrams + TM + liwc'
-            X_train_comb=np.concatenate((X_train_uni, X_train_lda, X_liwc_train),axis=1)
-            scaler = pp.StandardScaler().fit(X_train_comb)
+            X_train_comb=sparse.hstack((X_train_uni, X_train_lda, X_liwc_train))
+            scaler = pp.StandardScaler(copy=False, with_mean=False).fit(X_train_comb)
             X_train_comb = scaler.transform(X_train_comb)
             svm.fit(X_train_comb,y_train)
-            X_test_comb=np.concatenate((X_test_uni, X_test_lda, X_liwc_test),axis=1)
+            X_test_comb=sparse.hstack((X_test_uni, X_test_lda, X_liwc_test))
             X_test_comb = scaler.transform(X_test_comb)
             y_uni_lda_X_liwc = svm.predict(X_test_comb)
 
             # unigrams + LDA + X_hum
             print '>> unigrams + TM + contextual'
-            X_train_comb=np.concatenate((X_train_uni, X_train_lda, X_hum_train),axis=1)
-            scaler = pp.StandardScaler().fit(X_train_comb)
-            X_train_comb = scaler.transform(X_train_comb)
-            svm.fit(X_train_comb,y_train)
-            X_test_comb=np.concatenate((X_test_uni, X_test_lda, X_hum_test),axis=1)
-            X_test_comb = scaler.transform(X_test_comb)
-            y_uni_lda_X_hum = svm.predict(X_test_comb)
+            if X_hum_train != []:
+                X_train_comb=sparse.hstack((X_train_uni, X_train_lda, X_hum_train))
+                scaler = pp.StandardScaler(copy=False, with_mean=False).fit(X_train_comb)
+                X_train_comb = scaler.transform(X_train_comb)
+                svm.fit(X_train_comb,y_train)
+                X_test_comb=sparse.hstack((X_test_uni, X_test_lda, X_hum_test))
+                X_test_comb = scaler.transform(X_test_comb)
+                y_uni_lda_X_hum = svm.predict(X_test_comb)
+            else:
+                y_uni_lda_X_hum = y_uni_lda
 
             # unigrams + LDA + X_hum + X_liwc
             print '>> unigrams + TM + contextual + liwc'
-            X_train_comb=np.concatenate((X_train_uni, X_train_lda, X_hum_train, X_liwc_train),axis=1)
-            scaler = pp.StandardScaler().fit(X_train_comb)
-            X_train_comb = scaler.transform(X_train_comb)
-            svm.fit(X_train_comb,y_train)
-            X_test_comb=np.concatenate((X_test_uni, X_test_lda, X_hum_test, X_liwc_test),axis=1)
-            X_test_comb = scaler.transform(X_test_comb)
-            y_uni_lda_X_hum_X_liwc = svm.predict(X_test_comb)
+            if X_hum_train != []:
+                X_train_comb=sparse.hstack((X_train_uni, X_train_lda, X_hum_train, X_liwc_train))
+                scaler = pp.StandardScaler(copy=False, with_mean=False).fit(X_train_comb)
+                X_train_comb = scaler.transform(X_train_comb)
+                svm.fit(X_train_comb,y_train)
+                X_test_comb=sparse.hstack((X_test_uni, X_test_lda, X_hum_test, X_liwc_test))
+                X_test_comb = scaler.transform(X_test_comb)
+                y_uni_lda_X_hum_X_liwc = svm.predict(X_test_comb)
+            else:
+                y_uni_lda_X_hum_X_liwc = y_uni_lda_X_liwc
             
             # Compute scores
             if args.experiment_type == 'regression':
                 print '>> Computing Pearson\'s scores'
                 r_uni.append(np.corrcoef(y_uni-np.mean(y_uni), yt-np.mean(yt))[0,1])
                 r_lda.append(np.corrcoef(y_lda-np.mean(y_lda), yt-np.mean(yt))[0,1])
-                r_X_hum.append(np.corrcoef(y_X_hum-np.mean(y_X_hum), yt-np.mean(yt))[0,1])
+                if X_hum_train != []:
+                    r_X_hum.append(np.corrcoef(y_X_hum-np.mean(y_X_hum), yt-np.mean(yt))[0,1])
+                else:
+                    r_X_hum.append(0)
                 r_X_liwc.append(np.corrcoef(y_X_liwc-np.mean(y_X_liwc), yt-np.mean(yt))[0,1])
                 r_uni_lda.append(np.corrcoef(y_uni_lda-np.mean(y_uni_lda), yt-np.mean(yt))[0,1])
                 r_X_liwc_X_hum.append(np.corrcoef(y_X_liwc_X_hum-np.mean(y_X_liwc_X_hum), yt-np.mean(yt))[0,1])
